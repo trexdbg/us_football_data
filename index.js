@@ -17,7 +17,8 @@ MongoClient.connect(uri, function(err, client) {
 app.get('/players/:player', async (req,res) => {
     try {
 		const id = req.params.player
-        const docs = await db.collection('players').find({"player_name":id}).toArray()
+
+        const docs = await db.collection('players').find({ $text: { $search:id}}).toArray()
         res.status(200).json(docs)
     } catch (err) {
         console.log(err)
