@@ -67,15 +67,16 @@ for league in listleague:
                           }
         json_all.append(json_construct)
 
-    client = MongoClient('mongodb://localhost:27017/')
-    dblist = client.list_database_names()
+    client = MongoClient('mongodb+srv://gurrenlagan:gurrenlagan@cluster0.2ffdj.mongodb.net/')
+    dblist = client['data_sorare'].list_collections()
 
-    if "data_sorare" in dblist:
-        client.drop_database('data_sorare')
-        mydb = client["data_sorare"]
-        mydb.players.insert_many(json_all)
+    if "players" in dblist:
+
+        client['data_sorare'].drop_col('players')
+        client['data_sorare'].players.insert_many(json_all)
         print("maj ok")
+
     else:
-        mydb = client["data_sorare"]
-        mydb.players.insert_many(json_all)
+
+        client['data_sorare'].players.insert_many(json_all)
         print("maj ok")
