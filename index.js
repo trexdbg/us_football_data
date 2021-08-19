@@ -2,18 +2,17 @@ const express = require('express')
 const app = express()
 
 const MongoClient = require('mongodb').MongoClient;
-const url = 'mongodb://localhost:27017';
+const uri = process.env.MONGODB_URI;
 const dbName = 'data_sorare';
 const {spawn} = require('child_process');
 const port = process.env.PORT || 3000;
 
 let db
 
-MongoClient.connect(url, function(err, client) {
+MongoClient.connect(uri, function(err, client) {
   console.log("Connected successfully to server");
   db = client.db("data_sorare");
 });
-
 
 app.get('/players/:player', async (req,res) => {
     try {
