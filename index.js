@@ -25,18 +25,18 @@ app.get('/players/:player', async (req,res) => {
     }
 })
 
-app.get('/update', (req, res) => {
-
-	var dataToSend;
-	const python = spawn('python', ['./script/crawl_understats_players.py']);
-	python.stdout.on('data', function (data) {
-	console.log('python script');
-	dataToSend = data.toString();
-	});
-	python.on("close", (code) => { console.log ('process close &{code}');
-	res.send(dataToSend)
-	});
-	})
+//app.get('/update', (req, res) => {
+//
+//	var dataToSend;
+//	const python = spawn('python', ['./script/crawl_understats_players.py']);
+//	python.stdout.on('data', function (data) {
+//	console.log('python script');
+//	dataToSend = data.toString();
+//	});
+//	python.on("close", (code) => { console.log ('process close &{code}');
+//	res.send(dataToSend)
+//	});
+//	})
 
 app.listen(port,'0.0.0.0',  () => {
     console.log("Serveur à l'écoute")
