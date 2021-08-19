@@ -68,7 +68,7 @@ for league in listleague:
         json_all.append(json_construct)
 
     client = MongoClient('mongodb+srv://gurrenlagan:gurrenlagan@cluster0.2ffdj.mongodb.net/')
-    dblist = client['data_sorare'].list_collections()
+    dblist = client['data_sorare'].list_collection_names()
 
     if "players" in dblist:
 
