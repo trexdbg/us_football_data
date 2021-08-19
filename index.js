@@ -5,6 +5,8 @@ const MongoClient = require('mongodb').MongoClient;
 const url = 'mongodb://localhost:27017';
 const dbName = 'data_sorare';
 const {spawn} = require('child_process');
+const port = process.env.PORT || 3000;
+
 let db
 
 MongoClient.connect(url, function(err, client) {
@@ -37,6 +39,6 @@ app.get('/update', (req, res) => {
 	});
 	})
 
-app.listen(3000,'0.0.0.0',  () => {
+app.listen(port,'0.0.0.0',  () => {
     console.log("Serveur à l'écoute")
 })
