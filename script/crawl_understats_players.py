@@ -72,7 +72,7 @@ for league in listleague:
 
     if "players" in dblist:
 
-        client['data_sorare'].drop_col('players')
+        client['data_sorare'].drop_collection('players')
         client['data_sorare'].players.insert_many(json_all)
         print("maj ok")
 
