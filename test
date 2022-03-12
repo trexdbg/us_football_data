@@ -1,0 +1,35 @@
+import smartpy as sp
+
+ORACLE_ADDRESS = sp.address("KT19etCHSt75MTF4NvUHxRNBPvp74ggv9g3P")
+
+
+class RandomFeeder(sp.Contract):
+    def __init__(self, _oracleAddress):
+        self.init(
+            rdn_value=0,
+            oracleAddress=_oracleAddress,
+            matches=sp.big_map(
+                l={},
+                tkey=sp.TString,
+                tvalue=sp.TRecord(
+                    money=sp.TMutez,
+                    user1=sp.TAddress,
+                    user1Paid=sp.TBool,
+                    user2=sp.TAddress,
+                    user2Paid=sp.TBool,
+                    winner=sp.TOption(sp.TAddress),
+                )
+            )
+        )
+
+    @sp.entry_point
+    def createMatch(self, _name, _money, _user1, _user2):
+        matchData = sp.local('matchData', sp.record(
+            money=_money,
+            user1=_user1,
+            user1Paid=False,
+            user2=_user2,
+            user2Paid=False,
+            winner=sp.none
+        ))
+        self.data.matches[_name] = matchData.value
