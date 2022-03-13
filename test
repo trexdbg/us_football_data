@@ -1,35 +1,112 @@
 import smartpy as sp
+ORACLE_ADDRESS=sp.address("KT19etCHSt75MTF4NvUHxRNBPvp74ggv9g3P")
 
-ORACLE_ADDRESS = sp.address("KT19etCHSt75MTF4NvUHxRNBPvp74ggv9g3P")
+class OracleMockup(sp.Contract):
+    def __init__(self):
+        self.init()
 
+    @sp.onchain_view()
+    def getRandomBetween(self, params):
+        sp.set_type(params, sp.TRecord(_from=sp.TNat, _to=sp.TNat))
+        sp.result(sp.nat(20))
 
 class RandomFeeder(sp.Contract):
     def __init__(self, _oracleAddress):
         self.init(
-            rdn_value=0,
-            oracleAddress=_oracleAddress,
-            matches=sp.big_map(
-                l={},
-                tkey=sp.TString,
-                tvalue=sp.TRecord(
-                    money=sp.TMutez,
-                    user1=sp.TAddress,
-                    user1Paid=sp.TBool,
-                    user2=sp.TAddress,
-                    user2Paid=sp.TBool,
-                    winner=sp.TOption(sp.TAddress),
-                )
+        rdn_value = 0,
+        oracleAddress=_oracleAddress,
+        matches = sp.big_map(
+            l = {},
+            tkey=sp.TString,
+            tvalue=sp.TRecord(
+                money=sp.TMutez,
+                user1=sp.TAddress,
+                user1Paid=sp.TBool,
+                user2=sp.TAddress,
+                user2Paid=sp.TBool,
+                winner=sp.TOption(sp.TAddress),
             )
         )
+    )
 
     @sp.entry_point
     def createMatch(self, _name, _money, _user1, _user2):
         matchData = sp.local('matchData', sp.record(
-            money=_money,
-            user1=_user1,
-            user1Paid=False,
-            user2=_user2,
-            user2Paid=False,
-            winner=sp.none
-        ))
+                money=_money,
+                user1=_user1,
+                user1Paid=False,
+                user2=_user2,
+                user2Paid=False,
+                winner=sp.none
+            ))
         self.data.matches[_name] = matchData.value
+
+    @sp.entry_point
+    def payMatchFee(self, _name):
+        sp.verify(self.data.matches.contains(_name), 'MATCH_DOES_NOT_EXIST')
+        sp.verify(sp.amount == self.data.matches[_name].money, 'NOT_REQUIRED_MONEY')
+
+        sp.if self.data.matches[_name].user1 == sp.sender:
+            self.data.matches[_name].user1Paid = True
+        sp.else:
+            # if the sender who sent the transaction is not user1 then
+            # he must be user2, otherwise we'll raise an error.
+            sp.verify(self.data.matches[_name].user2 == sp.sender, 'USER_NOT_IN_GAME')
+            self.data.matches[_name].user2Paid = True
+
+    @sp.entry_point
+    def playGame(self, _name):
+        sp.verify(self.data.matches.contains(_name), 'MATCH_DOES_NOT_EXIST')
+
+        sp.verify(
+            (self.data.matches[_name].user1Paid == sp.bool(True)) &
+            (self.data.matches[_name].user2Paid == sp.bool(True)),
+            'USERS_HAVE_NOT_PAID_MONEY'
+        )
+
+        # Calculate winnerAmount
+        winnerAmount = sp.local('winnerAmount',
+            sp.utils.nat_to_mutez(
+                sp.utils.mutez_to_nat(self.data.matches[_name].money) * 2
+            )
+        )
+
+        # Call the oracle and get the random no and end the
+        # game give all the money to one user.
+        randomNo = sp.view(
+                "getRandomBetween",
+                self.data.oracleAddress,
+                sp.record(_from=sp.nat(1), _to=sp.nat(100)),
+                sp.TNat
+            ).open_some('WRONG_ORACLE_CONTRACT')
+
+        self.data.rdn_value = randomNo
+
+        sp.if randomNo <= sp.nat(50):
+            # User1 won
+            self.data.matches[_name].winner = sp.some(self.data.matches[_name].user1)
+            sp.send(self.data.matches[_name].user1, winnerAmount.value)
+        sp.else:
+            # User2 won
+            self.data.matches[_name].winner = sp.some(self.data.matches[_name].user2)
+            sp.send(self.data.matches[_name].user2, winnerAmount.value)
+
+sp.add_compilation_target("Compile", RandomFeeder(_oracleAddress="KT1F3yK7z7AsYvLdHwiJmFnM8thtTHeuZWTf"))
+
+@sp.add_test(name="Test RandomFeeder")
+def test():
+    scenario = sp.test_scenario()
+    user1 = sp.test_account("User1")
+    user2 = sp.test_account("User2")
+
+    oracle = OracleMockup()
+    scenario += oracle
+    r = RandomFeeder(_oracleAddress=oracle.address)
+    scenario += r
+    
+    gameName = "game"
+    r.createMatch(sp.record(_name=gameName, _money=sp.mutez(500000), _user1=user1.address, _user2=user2.address)).run(sender=user1)
+
+    r.payMatchFee(gameName).run(sender=user1.address, amount=sp.mutez(500000))
+    r.payMatchFee(gameName).run(sender=user2.address, amount=sp.mutez(500000))
+    r.playGame(gameName).run(sender=user1)
